@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Battleship Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #1e1e2f;
+      color: white;
+      padding-top: 40px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      gap: 8px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+
+    .cell {
+      width: 60px;
+      height: 60px;
+      background-color: #3498db;
+      border: 2px solid #2980b9;
+      cursor: pointer;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .hit {
+      background-color: crimson !important;
+    }
+
+    .miss {
+      background-color: gray !important;
+    }
+
+    #message {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    #restartBtn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #2ecc71;
+      color: white;
+      cursor: pointer;
+    }
+
+    #restartBtn:hover {
+      background-color: #27ae60;
+    }
+  </style>
+</head>
+<body>
+<a href="scratch.html" id="backLink" style="color: white;">Back to Skateboarding</a>
+  <h1>Battleship</h1>
+  <p>Click a square to try and sink the ship!</p>
+  <div id="grid"></div>
+  <div id="message"></div>
+  <button id="restartBtn" onclick="initGame()">Restart</button>
+
+  <script>
+    const gridSize = 5;
+    let shipRow, shipCol;
+    const grid = document.getElementById('grid');
+    const message = document.getElementById('message');
+
+    function initGame() {
+      grid.innerHTML = '';
+      message.textContent = '';
+      shipRow = Math.floor(Math.random() * gridSize);
+      shipCol = Math.floor(Math.random() * gridSize);
+
+      for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.row = row;
+          cell.dataset.col = col;
+          cell.addEventListener('click', handleClick);
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function handleClick(e) {
+      const row = parseInt(e.target.dataset.row);
+      const col = parseInt(e.target.dataset.col);
+
+      if (row === shipRow && col === shipCol) {
+        e.target.classList.add('hit');
+        e.target.textContent = '💥';
+        message.textContent = "Hit! You sank the ship!";
+        disableGrid();
+      } else {
+        e.target.classList.add('miss');
+        e.target.textContent = '🌊';
+        e.target.removeEventListener('click', handleClick);
+        message.textContent = "Miss! Try again.";
+      }
+    }
+
+    function disableGrid() {
+      const allCells = document.querySelectorAll('.cell');
+      allCells.forEach(cell => {
+        cell.removeEventListener('click', handleClick);
+      });
+    }
+
+    initGame(); // start on load
+  </script>
+</body>
+</html>
