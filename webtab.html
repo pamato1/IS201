@@ -7,120 +7,201 @@
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      background-color: #1e1e2f;
-      color: white;
-      padding-top: 40px;
+      background: #f0f0f0;
     }
-
     h1 {
-      margin-bottom: 10px;
-    }
-
-    #grid {
-      display: grid;
-      grid-template-columns: repeat(5, 60px);
-      gap: 8px;
-      justify-content: center;
-      margin: 20px auto;
-    }
-
-    .cell {
-      width: 60px;
-      height: 60px;
-      background-color: #3498db;
-      border: 2px solid #2980b9;
-      cursor: pointer;
-      font-size: 24px;
-      font-weight: bold;
-      color: white;
-    }
-
-    .hit {
-      background-color: crimson !important;
-    }
-
-    .miss {
-      background-color: gray !important;
-    }
-
-    #message {
       margin-top: 20px;
-      font-size: 18px;
     }
-
-    #restartBtn {
-      margin-top: 15px;
+    .boards {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin-top: 20px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, 40px);
+      gap: 5px;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      background-color: #cce;
+      border: 1px solid #333;
+      cursor: pointer;
+    }
+    .hit {
+      background-color: red !important;
+    }
+    .miss {
+      background-color: white !important;
+    }
+    .hidden {
+      cursor: default;
+    }
+    #reset {
+      margin-top: 20px;
       padding: 10px 20px;
       font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      background-color: #2ecc71;
+      background-color: #4CAF50;
       color: white;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
     }
-
-    #restartBtn:hover {
-      background-color: #27ae60;
+    #reset:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
 <body>
-<a href="scratch.html" id="backLink" style="color: white;">Back to Skateboarding</a>
-  <h1>Battleship</h1>
-  <p>Click a square to try and sink the ship!</p>
-  <div id="grid"></div>
-  <div id="message"></div>
-  <button id="restartBtn" onclick="initGame()">Restart</button>
+  <h1>Battleship: You vs Computer</h1>
+  <p>First to sink the other's Ship Wins!</p>
+  <p>Attack the computer's board...</p>
+  <div class="boards">
+    <div>
+      <h3>Your Board</h3>
+      <div id="player-board" class="board"></div>
+    </div>
+    <div>
+      <h3>Computer Board</h3>
+      <div id="computer-board" class="board"></div>
+    </div>
+  </div>
+  <p id="status"></p>
+  <button id="reset">Try Again</button>
+  <br><br>
+  <a href="scratch.html">Return to Skateboarding Page</a>
 
   <script>
-    const gridSize = 5;
-    let shipRow, shipCol;
-    const grid = document.getElementById('grid');
-    const message = document.getElementById('message');
+    const SIZE = 5;
+    const SHIP_LENGTH = 3;
+    let playerBoard = [], computerBoard = [];
+    let playerHits = 0, computerHits = 0;
+    let computerGuesses = [], computerTargets = [];
+    let playerTurn = true;
 
-    function initGame() {
-      grid.innerHTML = '';
-      message.textContent = '';
-      shipRow = Math.floor(Math.random() * gridSize);
-      shipCol = Math.floor(Math.random() * gridSize);
-
-      for (let row = 0; row < gridSize; row++) {
-        for (let col = 0; col < gridSize; col++) {
-          const cell = document.createElement('div');
-          cell.classList.add('cell');
-          cell.dataset.row = row;
-          cell.dataset.col = col;
-          cell.addEventListener('click', handleClick);
-          grid.appendChild(cell);
-        }
+    function createBoard(board, element, hidden = false) {
+      element.innerHTML = '';
+      for (let i = 0; i < SIZE * SIZE; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if (!hidden) cell.classList.add('hidden');
+        cell.dataset.index = i;
+        board[i] = 0;
+        element.appendChild(cell);
       }
     }
 
-    function handleClick(e) {
-      const row = parseInt(e.target.dataset.row);
-      const col = parseInt(e.target.dataset.col);
+    function placeShip(board) {
+      let dir = Math.random() < 0.5 ? 1 : SIZE;
+      let start;
+      do {
+        start = Math.floor(Math.random() * SIZE * SIZE);
+      } while (!canPlaceShip(start, dir, board));
+      for (let i = 0; i < SHIP_LENGTH; i++) {
+        board[start + i * dir] = 1;
+      }
+    }
 
-      if (row === shipRow && col === shipCol) {
+    function canPlaceShip(start, dir, board) {
+      for (let i = 0; i < SHIP_LENGTH; i++) {
+        const idx = start + i * dir;
+        if (idx >= SIZE * SIZE || board[idx] === 1) return false;
+        if (dir === 1 && Math.floor(start / SIZE) !== Math.floor(idx / SIZE)) return false;
+      }
+      return true;
+    }
+
+    function handlePlayerClick(e) {
+      if (!playerTurn) return;
+      const idx = +e.target.dataset.index;
+      if (computerBoard[idx] === 2 || computerBoard[idx] === 3) return;
+
+      if (computerBoard[idx] === 1) {
         e.target.classList.add('hit');
-        e.target.textContent = '💥';
-        message.textContent = "Hit! You sank the ship!";
-        disableGrid();
+        computerBoard[idx] = 2;
+        playerHits++;
+        if (playerHits === SHIP_LENGTH) return endGame('You win!');
       } else {
         e.target.classList.add('miss');
-        e.target.textContent = '🌊';
-        e.target.removeEventListener('click', handleClick);
-        message.textContent = "Miss! Try again.";
+        computerBoard[idx] = 3;
+        playerTurn = false;
+        setTimeout(computerMove, 800);
       }
     }
 
-    function disableGrid() {
-      const allCells = document.querySelectorAll('.cell');
-      allCells.forEach(cell => {
-        cell.removeEventListener('click', handleClick);
-      });
+    function computerMove() {
+      let idx;
+      if (computerTargets.length > 0) {
+        idx = computerTargets.pop();
+      } else {
+        do {
+          idx = Math.floor(Math.random() * SIZE * SIZE);
+        } while (computerGuesses.includes(idx));
+      }
+
+      computerGuesses.push(idx);
+      const cells = document.querySelectorAll('#player-board .cell');
+      if (playerBoard[idx] === 1) {
+        cells[idx].classList.add('hit');
+        playerBoard[idx] = 2;
+        computerHits++;
+        computerTargets.push(...getAdjacentCells(idx));
+        if (computerHits === SHIP_LENGTH) return endGame('Computer wins!');
+        setTimeout(computerMove, 800);
+      } else {
+        cells[idx].classList.add('miss');
+        playerBoard[idx] = 3;
+        playerTurn = true;
+      }
     }
 
-    initGame(); // start on load
+    function getAdjacentCells(idx) {
+      const adj = [];
+      if (idx % SIZE > 0) adj.push(idx - 1);
+      if (idx % SIZE < SIZE - 1) adj.push(idx + 1);
+      if (idx - SIZE >= 0) adj.push(idx - SIZE);
+      if (idx + SIZE < SIZE * SIZE) adj.push(idx + SIZE);
+      return adj.filter(i => !computerGuesses.includes(i));
+    }
+
+    function endGame(message) {
+      document.getElementById('status').textContent = message;
+      const cells = document.querySelectorAll('#computer-board .cell');
+      cells.forEach(cell => cell.removeEventListener('click', handlePlayerClick));
+    }
+
+    function resetGame() {
+      playerHits = 0;
+      computerHits = 0;
+      playerTurn = true;
+      computerGuesses = [];
+      computerTargets = [];
+      playerBoard = [];
+      computerBoard = [];
+      document.getElementById('status').textContent = '';
+      createBoard(playerBoard, playerBoardDiv);
+      createBoard(computerBoard, computerBoardDiv, true);
+      placeShip(playerBoard);
+      placeShip(computerBoard);
+      document.querySelectorAll('#computer-board .cell').forEach(cell =>
+        cell.addEventListener('click', handlePlayerClick)
+      );
+    }
+
+    // Initialize
+    const playerBoardDiv = document.getElementById('player-board');
+    const computerBoardDiv = document.getElementById('computer-board');
+    createBoard(playerBoard, playerBoardDiv);
+    createBoard(computerBoard, computerBoardDiv, true);
+    placeShip(playerBoard);
+    placeShip(computerBoard);
+    document.querySelectorAll('#computer-board .cell').forEach(cell =>
+      cell.addEventListener('click', handlePlayerClick)
+    );
+
+    document.getElementById('reset').addEventListener('click', resetGame);
   </script>
 </body>
 </html>
